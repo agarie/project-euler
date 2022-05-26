@@ -1,6 +1,7 @@
-
+-- Project Euler #11
 
 import Data.Matrix as M
+import qualified Data.Vector
 
 grid = "\
 \08 02 22 97 38 15 00 40 00 75 04 05 07 78 52 12 50 77 91 08\n\
@@ -28,23 +29,33 @@ lists = fmap (\l -> fmap read $ words l) . lines $ grid :: [[Int]]
 
 x = M.fromLists lists :: Matrix Int
 
--- Create functions for row products, column products, diagonal products.
--- Sweep the whole matrix, creating submatrices and collecting all products.
--- Look for the maximum value in the products list.
+-- Create functions for {row, column, diagonal} products
+-- Find the largest product for each submatrix
+-- Find the largest product of all submatrices
 
--- List of indices used to create 4x4 submatrices from `x`.
-idx = [(x, y) | x <- [1..20 - 3], y <- [1..20 - 3]]
+-- Generate the 4x4 submatrix of `x` at location (`i`, `j`)
+subm4 ::  Matrix Int -> (Int, Int) -> Matrix Int
 subm4 x (i, j) = M.submatrix i (i + 3) j (j + 3) x
-submatrices x = fmap (subm4 x) idx
 
-rowProduct i m = product . (M.getRow i) $ m
-colProduct j m = product . (M.getCol j) $ m
+submatrices :: Matrix Int -> [Matrix Int]
+submatrices x = fmap (subm4 x) idx where
+  idx = [(x, y) | x <- [1..20 - 3], y <- [1..20 - 3]]
+
+vectorProductOf :: (Int -> Matrix Int -> Data.Vector.Vector Int) -> Int -> Matrix Int -> Int
+vectorProductOf f i m = product . (f i) $ m
+
+rowProduct :: Int -> Matrix Int -> Int
+rowProduct = vectorProductOf M.getRow
+
+colProduct :: Int -> Matrix Int -> Int
+colProduct = vectorProductOf M.getCol
 
 rows m = [rowProduct i m | i <- [1..4]]
 cols m = [colProduct j m | j <- [1..4]]
+counterDiagProd m = (m ! (4, 1)) * (m ! (3, 2)) * (m ! (2, 3)) * (m ! (1, 4))
 
-counterDiagProd m = (M.getElem 4 1 m) * (M.getElem 3 2 m) * (M.getElem 2 3 m) * (M.getElem 1 4 m)
+largestProd :: Matrix Int -> Int
+largestProd m = maximum $ (rows m) ++ (cols m) ++ [M.diagProd m] ++ [counterDiagProd m]
 
-prods m = (rows m) ++ (cols m) ++ [M.diagProd m] ++ [counterDiagProd m]
-
-main = putStrLn $ show (maximum . concat $ fmap prods (submatrices x))
+main :: IO ()
+main = putStrLn . show . maximum $ fmap largestProd (submatrices x)
