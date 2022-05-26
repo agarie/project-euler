@@ -1,6 +1,6 @@
--- These packages must be installed separately.
+
+
 import Data.Matrix as M
-import Data.Vector as V
 
 grid = "\
 \08 02 22 97 38 15 00 40 00 75 04 05 07 78 52 12 50 77 91 08\n\
@@ -24,19 +24,27 @@ grid = "\
 \20 73 35 29 78 31 90 01 74 31 49 71 48 86 81 16 23 57 05 54\n\
 \01 70 54 71 83 51 54 69 16 92 33 48 61 43 52 01 89 19 67 48"
 
-lists = map (\l -> map read $ words l) . lines $ grid :: [[Int]]
-x = M.fromLists lists
+lists = fmap (\l -> fmap read $ words l) . lines $ grid :: [[Int]]
 
--- List of indices used to create 4x4 submatrices from `x`.
-idx = [(x, y) | x <- [1...20 - 4], y <- [1..20 - 4]]
-
--- `Data.Matrix` indices start on 1.
+x = M.fromLists lists :: Matrix Int
 
 -- Create functions for row products, column products, diagonal products.
 -- Sweep the whole matrix, creating submatrices and collecting all products.
 -- Look for the maximum value in the products list.
 
-M.submatrix 1 4 1 4 x
+-- List of indices used to create 4x4 submatrices from `x`.
+idx = [(x, y) | x <- [1..20 - 3], y <- [1..20 - 3]]
+subm4 x (i, j) = M.submatrix i (i + 3) j (j + 3) x
+submatrices x = fmap (subm4 x) idx
 
-fun i m = V.product . (M.getRow i) $ m
--- Equivalent functions with `getColumn`, etc
+rowProduct i m = product . (M.getRow i) $ m
+colProduct j m = product . (M.getCol j) $ m
+
+rows m = [rowProduct i m | i <- [1..4]]
+cols m = [colProduct j m | j <- [1..4]]
+
+counterDiagProd m = (M.getElem 4 1 m) * (M.getElem 3 2 m) * (M.getElem 2 3 m) * (M.getElem 1 4 m)
+
+prods m = (rows m) ++ (cols m) ++ [M.diagProd m] ++ [counterDiagProd m]
+
+main = putStrLn $ show (maximum . concat $ fmap prods (submatrices x))
